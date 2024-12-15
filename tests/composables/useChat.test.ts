@@ -1,5 +1,5 @@
 import { useChat } from "@/composables/useChat";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 describe('useChat',()=>{
   test('add message correctly when onMessage is called',async ()=>{
@@ -45,6 +45,27 @@ describe('useChat',()=>{
       id: expect.any(Number),
       message: text,
       itsMine: true,
+    })
+
+  })
+
+  test('mock response - fetch api', async () =>{
+    const mockResponse = {answer:'yes',image:'example.gif'};
+    (window as any).fetch = vi.fn( async ()=>({
+      json: async ()=> mockResponse
+    }))
+
+    const text = '¿Quieres cafe?'
+    const {messages, onMessage}= useChat()
+    await onMessage(text)
+    await new Promise( (r)=> setTimeout(r,1600))
+    const [,herMessage] = messages.value
+
+    expect(herMessage).toEqual({
+      id: expect.any(Number),
+      message: mockResponse.answer,
+      image: mockResponse.image,
+      itsMine: false,
     })
 
   })
