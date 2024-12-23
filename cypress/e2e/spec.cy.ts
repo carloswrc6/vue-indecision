@@ -40,45 +40,88 @@ describe('Sending messages', () => {
 
   })
 
+  it.only('recorrer el array de mensajes, solo si el string contiene ? deberá verificar que tenga una respuesta yes o no', () => {
+    const messages = ['Hola1', 'Hola2?', 'Hola3?', 'Hola4', 'Hola5?', 'Hola6?'];
+    const defaultTimeout = 5000; // Tiempo de espera
 
-  // it.only('recorrer el array de mensajes, solo si el string contiene ? deberá verificar que tenga una respuesta yes o no', () => {
-  //   const messages = ['Hola1', 'Hola2?', 'Hola3?', 'Hola4', 'Hola5?', 'Hola6?'];
-  //   const defaultTimeout = 5000; // Tiempo de espera
+    cy.visit('http://localhost:5173');
+
+    messages.forEach((message, index) => {
+      cy.get('input[type="text"]')
+        .type(message, { force: true })
+        .should('have.value', message);
+
+      cy.get('button.bg-blue-500').click();
+
+      cy.get('.bg-blue-200')
+        .last()
+        .should('have.text', message);
+
+      if (message.includes('?')) {
+        // Esperar hasta que se agregue un nuevo mensaje de respuesta
+        cy.get('.bg-gray-300', { timeout: defaultTimeout })
+          .last() // Tomar la última respuesta
+          .within(() => {
+            // Verificar que el texto sea "yes" o "no"
+            cy.get('span')
+              .invoke('text')
+              .should('match', /yes|no/);
+
+            // Verificar que la imagen tiene el atributo 'src' correcto
+            cy.get('img')
+              .should('have.attr', 'src')
+              .and('include', 'https://yesno.wtf/assets');
+          });
+      }
+    });
+  });
   
-  //   cy.visit('http://localhost:5173');
+  it('verificar que mensajes con ? tengan respuestas válidas', () => {
+    const messages = ['Hola1', 'Hola2?', 'Hola3?', 'Hola4', 'Hola5?', 'Hola6?'];
+    const defaultTimeout = 5000; // Tiempo de espera
   
-  //   messages.forEach((message, index) => {
-  //     // Enviar el mensaje
-  //     cy.get('input[type="text"]')
-  //       .type(message)
-  //       .should('have.value', message);
+    cy.visit('http://localhost:5173');
   
-  //     cy.get('button.bg-blue-500').click();
+    let questionCount = 0; // Contador de mensajes con ?
+    let responseCount = 0; // Contador de respuestas válidas
   
-  //     // Validar que el mensaje enviado aparece en la lista
-  //     cy.get('.bg-blue-200')
-  //       .last()
-  //       .should('have.text', message);
+    messages.forEach((message, index) => {
+      cy.get('input[type="text"]')
+        .type(message, { force: true })
+        .should('have.value', message);
   
-  //     // Si el mensaje contiene '?', esperar y verificar la respuesta
-  //     if (message.includes('?')) {
-  //       // Esperar hasta que se agregue un nuevo mensaje de respuesta
-  //       cy.get('.bg-gray-300', { timeout: defaultTimeout })
-  //         .should('have.length.greaterThan', index) // Asegurarse que hay más respuestas que mensajes
-  //         .last() // Tomar la última respuesta
-  //         .within(() => {
-  //           // Verificar que el texto sea "yes" o "no"
-  //           cy.get('span')
-  //             .invoke('text')
-  //             .should('match', /yes|no/);
+      cy.get('button.bg-blue-500').click();
   
-  //           // Verificar que la imagen tiene el atributo 'src' correcto
-  //           cy.get('img')
-  //             .should('have.attr', 'src')
-  //             .and('include', 'https://yesno.wtf/assets');
-  //         });
-  //     }
-  //   });
-  // });
+      cy.get('.bg-blue-200')
+        .last()
+        .should('have.text', message);
+  
+      if (message.includes('?')) {
+        questionCount++; // Incrementar contador de mensajes con ?
+  
+        // Esperar hasta que se agregue un nuevo mensaje de respuesta
+        cy.get('.bg-gray-300', { timeout: defaultTimeout })
+          .last()
+          .within(() => {
+            cy.get('span')
+              .invoke('text')
+              .should('match', /yes|no/)
+              .then(() => {
+                responseCount++; // Incrementar contador de respuestas válidas
+              });
+  
+            cy.get('img')
+              .should('have.attr', 'src')
+              .and('include', 'https://yesno.wtf/assets');
+          });
+      }
+    });
+  
+    // Verificar que la cantidad de respuestas coincida con la cantidad de mensajes con ?
+    cy.then(() => {
+      expect(responseCount).to.equal(questionCount);
+    });
+  });
+  
   
 })
